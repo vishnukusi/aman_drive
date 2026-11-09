@@ -1,5 +1,5 @@
 // DriveFlow API: one framework-free request handler (Node http req/res), used by the dev server and the Vercel function.
-import { migrate, openDb, one, q } from './db.js';
+import { dbUrlFromEnv, migrate, openDb, one, q } from './db.js';
 import {
   ApiError, TENANT, audit, authoriseCustomer, changesAfter, createEnquiry, customerTimeline, customerView, ensureSeed, getEnquiryFull,
   listEnquiries, listVehicles, requireRow, resetDemo, saveStaffNotes, staffMessage, summary, supplyDetails, transition, updateVehicle,
@@ -15,7 +15,7 @@ let ready = null;
 let dbRef = null;
 /** Lazily opens, migrates and seeds the database once per process (or serverless instance). */
 export function getDb(options = {}) {
-  if (!options.db && !options.url && process.env.VERCEL && !process.env.DATABASE_URL) {
+  if (!options.db && !options.url && process.env.VERCEL && !dbUrlFromEnv()) {
     // Serverless file systems are read-only/ephemeral: refuse rather than silently lose enquiries.
     return Promise.reject(new ApiError(503, 'not_configured', 'The DriveFlow database is not configured for this deployment.'));
   }

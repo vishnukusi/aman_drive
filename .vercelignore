@@ -6,3 +6,4 @@ dist
 dist-seo
 .vercel
 *.log
+*.local.txt

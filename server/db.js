@@ -116,7 +116,11 @@ const SCHEMA = [
   )`,
 ];
 
-export function openDb(url = process.env.DATABASE_URL || 'file:./data/driveflow.db', authToken = process.env.DATABASE_AUTH_TOKEN) {
+// Accepts our own variable names or the ones the Vercel Turso integration creates (TURSO_DATABASE_URL / TURSO_AUTH_TOKEN).
+export const dbUrlFromEnv = (env = process.env) => env.DATABASE_URL || env.TURSO_DATABASE_URL || '';
+export const dbTokenFromEnv = (env = process.env) => env.DATABASE_AUTH_TOKEN || env.TURSO_AUTH_TOKEN || undefined;
+
+export function openDb(url = dbUrlFromEnv() || 'file:./data/driveflow.db', authToken = dbTokenFromEnv()) {
   if (url.startsWith('file:') && !url.includes(':memory:')) {
     const path = url.slice(5);
     try { mkdirSync(dirname(path), { recursive: true }); } catch { /* exists */ }
