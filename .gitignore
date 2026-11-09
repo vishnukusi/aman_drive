@@ -1,3 +1,9 @@
 node_modules
 dist
 .env
+dist-seo
+.env.local
+.env.*.local
+.vercel
+.netlify
+*.log

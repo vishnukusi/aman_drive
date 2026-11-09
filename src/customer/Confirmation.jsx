@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useStore, getEnquiry, isMine } from '../store.js';
 import { EstimateBox, StatusBadge } from '../components/ui.jsx';
-import { buildCustomerMessage, fmtDate, fmtWhen, locationText, waLink } from '../lib/whatsapp.js';
+import { CITY_NAMES, buildCustomerMessage, fmtDate, fmtWhen, locationText, waLink } from '../lib/whatsapp.js';
+import Icon from '../components/Icon.jsx';
 import { CONFIG } from '../config.js';
 
 export function EnquiryDetailsList({ enq }) {
@@ -12,8 +13,9 @@ export function EnquiryDetailsList({ enq }) {
       <dt>Pickup</dt><dd>{fmtWhen(enq.pickup.date, enq.pickup.time)}</dd>
       <dt>Return</dt><dd>{fmtWhen(enq.ret.date, enq.ret.time)}</dd>
       <dt>Duration</dt><dd>{enq.durationLabel}</dd>
-      <dt>Pickup at</dt><dd>{locationText(enq.pickupMode, enq.pickupDetail)}</dd>
-      <dt>Return at</dt><dd>{locationText(enq.returnMode, enq.returnDetail)}</dd>
+      {enq.city && (<><dt>City</dt><dd>{CITY_NAMES[enq.city] || enq.city}</dd></>)}
+      <dt>Pickup at</dt><dd>{locationText(enq.pickupMode, enq.pickupDetail, enq.city)}</dd>
+      <dt>Return at</dt><dd>{locationText(enq.returnMode, enq.returnDetail, enq.city)}</dd>
       <dt>Trip</dt><dd>{enq.tripType === 'city' ? 'Within the city' : 'Outstation'} · {enq.destination}</dd>
       {enq.notes && (<><dt>Notes</dt><dd>{enq.notes}</dd></>)}
       <dt>Name</dt><dd>{enq.customer.name}</dd>
@@ -60,18 +62,18 @@ export default function Confirmation() {
   return (
     <div className="container section" style={{ maxWidth: 860 }}>
       <div className="success-hero">
-        <div className="tick" aria-hidden>✓</div>
-        <h2>Your booking request has been received.</h2>
-        <p className="muted" style={{ marginTop: 8, maxWidth: 560, marginInline: 'auto' }}>
-          The Aman Self Drive team will review your requirements and confirm availability and final pricing.
+        <div className="tick" aria-hidden><Icon name="whatsapp" size={30} /></div>
+        <h1 className="h2">Your enquiry is ready to send</h1>
+        <p className="muted" style={{ marginTop: 8, maxWidth: 580, marginInline: 'auto' }}>
+          One more step: send it to Aman Self Drive on WhatsApp. The team then reviews your requirements and confirms availability and the
+          final price. Nothing is booked until they confirm.
         </p>
         <div className="id-pill">Enquiry ID: {enq.id}</div>
-        <div style={{ marginTop: 10 }}><StatusBadge status={enq.status} /></div>
       </div>
 
       <div className="notice warn" style={{ marginTop: 22 }}>
-        <strong>One more step:</strong> this concept demo has no live link to the business, so your request is saved in this browser only.
-        Tap the button below to send it to Aman Self Drive on WhatsApp. It opens WhatsApp with the message ready; it is only sent when you press Send.
+        <strong>Not sent yet.</strong> Tap <b>Continue on WhatsApp</b>: it opens WhatsApp with the message below filled in, and it is only sent when
+        you press Send.{CONFIG.demoMode ? ' In this preview build the enquiry is also kept in this browser so you can track it.' : ''}
       </div>
 
       <div className="card stack" style={{ marginTop: 16 }}>
@@ -81,7 +83,7 @@ export default function Confirmation() {
         </div>
         <div className="wa-preview">{message}</div>
         <div className="row">
-          <a className="btn btn-wa grow" href={waLink(message)} target="_blank" rel="noreferrer">Continue on WhatsApp</a>
+          <a className="btn btn-wa btn-lg grow" href={waLink(message)} target="_blank" rel="noopener noreferrer"><Icon name="whatsapp" size={20} /> Continue on WhatsApp</a>
           <button className="btn btn-ghost" onClick={copy}>{copied ? 'Copied ✓' : 'Copy message'}</button>
         </div>
         <p className="hint">Opening WhatsApp is a simple link. It is not a WhatsApp Business integration, and no reply is generated automatically.</p>
@@ -94,7 +96,7 @@ export default function Confirmation() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <h3 style={{ marginBottom: 10 }}>Progress</h3>
+        <div className="row spread" style={{ marginBottom: 10 }}><h3>Progress</h3><StatusBadge status={enq.status} /></div>
         <ul className="timeline">
           {enq.history.map((h, i) => (
             <li key={i}><strong>{h.label}</strong><div className="small muted">{fmtDate(h.at)}</div></li>

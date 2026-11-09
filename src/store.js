@@ -97,7 +97,7 @@ export function addEnquiry(data) {
     createdAt: now,
     status: 'New Enquiry',
     adminNotes: '',
-    history: [{ at: now, by: 'customer', label: 'Enquiry submitted through DriveFlow' }],
+    history: [{ at: now, by: 'customer', label: 'Enquiry prepared on the website' }],
   };
   const ok = commit({ enquiries: [enquiry, ...state.enquiries] });
   if (!ok) throw new Error('Could not save the enquiry in this browser (storage is full or blocked).');

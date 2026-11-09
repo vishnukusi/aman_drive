@@ -36,3 +36,15 @@ Anything touching these says "Please contact Aman Self Drive for confirmation."
 
 ## Simulated data
 Seven enquiries (`DF-0993` to `DF-0999`) with fictional names ("Demo Customer A…") and 90000-00xxx numbers, tagged "Simulated" everywhere.
+
+---
+
+## Re-check on 9 Nov 2026 (website upgrade)
+- All 22 cars, 24-hr rates, printed 12-hr rates and ₹400 extra-hour flags re-checked car by car: **no changes**.
+- Added from the official site: email (keerthikumar007@gmail.com), Hyderabad and Vizag office addresses and Google Maps links, social links,
+  the business's own stats (8 years, 2 states, 10 locations, 1,000+ customers), four Google reviews with names, "Why choose" points, About text.
+- **The section "Not published, so NOT claimed" above is now partly out of date.** `amanselfdrivecars.com/faq` publishes: minimum age 24,
+  late return ₹400/hr (regular) and ₹600/hr (7-seaters), 60 % of damage estimate payable, and a cancellation refund schedule. The site's FAQ
+  now quotes these with their source. Still unpublished: deposit amounts, delivery charges, one-way charges, live availability.
+- Conflicts needing the client: 7-seater late-return rate (₹600 on /faq vs ₹400 on car cards); document list (home vs /faq); opening hours
+  (8 AM–9 PM is printed only on the Hyderabad page). Full list: `docs/FINAL_COMPLETION_REPORT.md`.

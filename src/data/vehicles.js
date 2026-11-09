@@ -8,9 +8,10 @@
 //   - `category` and `seats` are the standard class / typical seating of the model. Fleet variants may differ.
 //   - Transmission / fuel are left null when the site does not say.
 // Admins can edit all of it in the dashboard. Nothing here implies live availability.
-
-const IMG = 'https://amanselfdrivecars.com/assets/images/';
-const img = (f) => IMG + encodeURI(f);
+// Re-checked car by car against the live site on 9 Nov 2026: no price or name changes.
+//
+// Images: `sourceImage` is the file name on amanselfdrivecars.com/assets/images. `scripts/fetch-images.mjs` downloads it and
+// writes resized WebP copies to public/images/fleet/<id>-480.webp and -960.webp (hot-linking failed for the .avif files).
 
 const v = (id, name, category, seats, transmission, fuel, rate24, rate12, extraHour, image) => ({
   id,
@@ -22,7 +23,9 @@ const v = (id, name, category, seats, transmission, fuel, rate24, rate12, extraH
   rate24,
   rate12, // null = no 12-hr price printed
   extraHour, // null = not listed on the car card
-  image: img(image),
+  image: `images/fleet/${id}-480.webp`,
+  imageLarge: `images/fleet/${id}-960.webp`,
+  sourceImage: image,
   visible: true,
   source: 'amanselfdrivecars.com',
   verified: true,
@@ -55,7 +58,20 @@ export const VEHICLES = [
 
 export const CATEGORIES = ['Hatchback', 'Sedan', 'SUV', 'MPV'];
 
+export const CATEGORY_LABELS = { Hatchback: 'Hatchbacks', Sedan: 'Sedans', SUV: 'SUVs', MPV: 'MPV / 7-seaters' };
+
+// Collections are cross-cutting groupings asked for in the brief. They are derived by rule from published data,
+// never hand-picked, so they stay correct when staff edit a car. The thresholds need client approval (audit D6).
+export const PREMIUM_MIN_RATE = 4500;
+export const COLLECTIONS = [
+  { id: 'premium', label: 'Premium', blurb: `Published 24-hr rate of ₹${PREMIUM_MIN_RATE.toLocaleString('en-IN')} or more`, test: (v) => v.rate24 >= PREMIUM_MIN_RATE },
+  { id: 'family', label: 'Family (7 seats)', blurb: 'Seven seats typical for the model', test: (v) => v.seats >= 7 },
+];
+
+export const inCollection = (veh, id) => !!COLLECTIONS.find((c) => c.id === id)?.test(veh);
+
 export const transmissionKind = (veh) => {
+  // Only what the website states: "AT & MT", "Automatic". Word boundaries so e.g. "Manual" or "CNG" never match "at".
   const t = (veh.transmission || '').toLowerCase();
-  return { automatic: t.includes('automatic') || t.includes('at'), manual: t.includes('mt') };
+  return { automatic: /\b(at|automatic)\b/.test(t), manual: /\b(mt|manual)\b/.test(t) };
 };

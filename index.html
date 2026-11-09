@@ -1,14 +1,78 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0f1b2d" />
-    <title>DriveFlow — Concept demo for Aman Self Drive</title>
-    <meta name="description" content="DriveFlow: a rental enquiry and booking coordination concept for Aman Self Drive Car Rentals, Vijayawada. Concept demonstration by ComputeX." />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b1b33" />
+    <title>Aman Self Drive Car Rentals | Self Drive Cars in Vijayawada, Hyderabad &amp; Vizag</title>
+    <meta name="description" content="Self drive car rental in Vijayawada, Hyderabad and Vizag from ₹1,500 per 24 hours with 400 km. Hatchbacks, SUVs, Innova and Fortuner, doorstep delivery in Vijayawada and one-way trips. Book on WhatsApp." />
+    <!--%SEO_HEAD%-->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Aman Self Drive Car Rentals" />
+    <meta property="og:locale" content="en_IN" />
+    <meta property="og:title" content="Aman Self Drive Car Rentals | Self Drive Cars in Vijayawada, Hyderabad &amp; Vizag" />
+    <meta property="og:description" content="Self drive cars from ₹1,500 per 24 hours with 400 km. Hatchbacks, SUVs, Innova and Fortuner. Book on WhatsApp." />
+    <meta property="og:image" content="images/fleet/hero-thar-1400.webp" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="icon" type="image/png" href="images/brand/aman-icon.png" />
+    <link rel="apple-touch-icon" href="images/brand/aman-icon.png" />
+
+    <!-- Official brand fonts (Rajdhani headings, Poppins body), only the weights used. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Loaded without blocking first paint; system fonts show until they arrive (display=swap). -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap" /></noscript>
+
+    <!-- Hero images are rendered by JavaScript, so tell the browser about them up front (LCP). -->
+    <link rel="preload" as="image" href="images/places/vijayawada-640.webp" media="(max-width: 899px)" fetchpriority="high" />
+    <link rel="preload" as="image" href="images/places/vijayawada-1200.webp" media="(min-width: 900px)" fetchpriority="high" />
+    <link rel="preload" as="image" href="images/fleet/hero-thar-560.webp" imagesrcset="images/fleet/hero-thar-560.webp 560w, images/fleet/hero-thar-800.webp 800w, images/fleet/hero-thar-1400.webp 1400w" imagesizes="(min-width: 960px) 520px, 88vw" />
+
+    <!-- Structured data: only facts published on amanselfdrivecars.com. No ratings or review counts are claimed. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "AutoRental",
+        "name": "Aman Self Drive Car Rentals",
+        "url": "https://amanselfdrivecars.com/",
+        "logo": "https://amanselfdrivecars.com/assets/images/Aman_Logo.png",
+        "telephone": "+91-95813-78999",
+        "email": "keerthikumar007@gmail.com",
+        "priceRange": "₹1,500 – ₹15,000 per 24 hours",
+        "areaServed": ["Vijayawada", "Hyderabad", "Visakhapatnam"],
+        "sameAs": ["https://www.facebook.com/vijayawadaselfdrivecars", "https://www.instagram.com/amanselfdrivecars"],
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "MG Rd, Revenue Colony Park, Sidhartha Nagar, Labbipet",
+          "addressLocality": "Vijayawada",
+          "addressRegion": "Andhra Pradesh",
+          "postalCode": "520010",
+          "addressCountry": "IN"
+        },
+        "department": [
+          {
+            "@type": "AutoRental",
+            "name": "Aman Self Drive Car Rentals, Hyderabad",
+            "telephone": "+91-95813-78999",
+            "address": { "@type": "PostalAddress", "streetAddress": "Sri Sai Krishna Nivas, HIG 358, KPHB Phase 6, Kukatpally", "addressLocality": "Hyderabad", "addressRegion": "Telangana", "postalCode": "500085", "addressCountry": "IN" }
+          },
+          {
+            "@type": "AutoRental",
+            "name": "Aman Self Drive Car Rentals, Vizag",
+            "telephone": "+91-95813-78999",
+            "address": { "@type": "PostalAddress", "streetAddress": "29-13-29/1, Prakasaraopeta, Nehru Nagar, Ram Nagar", "addressLocality": "Visakhapatnam", "addressRegion": "Andhra Pradesh", "postalCode": "530020", "addressCountry": "IN" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <p style="padding:16px;font-family:sans-serif">Aman Self Drive Car Rentals · Call or WhatsApp +91 95813 78999 · <a href="https://wa.me/919581378999">Book on WhatsApp</a></p>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

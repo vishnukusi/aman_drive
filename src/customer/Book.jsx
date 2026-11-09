@@ -7,15 +7,17 @@ import { Field, EstimateBox, CarImage } from '../components/ui.jsx';
 import { specChips } from '../components/VehicleCard.jsx';
 import { durationHours, estimate, formatDuration, inr } from '../lib/pricing.js';
 import { normalizeMobile, todayISO, validateStep } from '../lib/validation.js';
-import { MODE_LABELS, fmtWhen, locationText } from '../lib/whatsapp.js';
+import { CITY_NAMES, fmtWhen, locationText, modeLabel } from '../lib/whatsapp.js';
+import { CITIES, cityById } from '../data/business.js';
+import { usePageMeta } from '../lib/meta.js';
 
 const STEPS = [
   { key: 'car', title: 'Pick your car', say: 'Which car would you like?', sub: 'Tap one to select it. You can change it later.' },
   { key: 'dates', title: 'Dates & times', say: 'When do you need it?', sub: 'I will work out the duration for you.' },
-  { key: 'places', title: 'Pickup & return', say: 'Where should the handover happen?', sub: 'Vijayawada is the default. The team confirms feasibility and any charges.' },
+  { key: 'places', title: 'City, pickup & return', say: 'Which city, and where should the handover happen?', sub: 'The team confirms feasibility and any delivery charges.' },
   { key: 'trip', title: 'Your trip', say: 'Where are you headed?', sub: 'This helps the team suggest the right slot and plan.' },
   { key: 'you', title: 'About you', say: 'How can the team reach you?', sub: 'Only the basics. Please do not share ID documents here.' },
-  { key: 'review', title: 'Review & send', say: 'Everything look right?', sub: 'Submitting sends nothing to the business by itself. You will get a WhatsApp message to send.' },
+  { key: 'review', title: 'Review & send', say: 'Everything look right?', sub: 'Nothing reaches the business until you press Send in WhatsApp.' },
 ];
 
 const addDays = (iso, n) => {
@@ -24,6 +26,13 @@ const addDays = (iso, n) => {
   return todayISO(d);
 };
 
+/** Handover options for a city, as listed on the official website, honouring VITE_DELIVERY_ENABLED. */
+function modesFor(cityId) {
+  const city = cityById(cityId) || cityById('vijayawada');
+  const keys = CONFIG.deliveryEnabled ? city.handover : city.handover.filter((k) => k === 'office' || k === 'discuss');
+  return keys.map((k) => [k, modeLabel(k, city.id)]);
+}
+
 export default function Book() {
   const nav = useNavigate();
   const [params] = useSearchParams();
@@ -31,7 +40,9 @@ export default function Book() {
   const catalogue = vehicles.filter((v) => v.visible);
   const today = todayISO();
 
+  usePageMeta('Plan your trip | Aman Self Drive Car Rentals', 'Choose a car, dates, city and pickup, see an indicative estimate and send a complete enquiry to Aman Self Drive on WhatsApp.');
   const preselected = catalogue.find((v) => v.id === params.get('car'));
+  const presetCity = cityById(params.get('city'))?.id || 'vijayawada';
   const [step, setStep] = useState(preselected ? 1 : 0);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
@@ -43,6 +54,7 @@ export default function Book() {
     pickupTime: '09:00',
     returnDate: addDays(today, 2),
     returnTime: '09:00',
+    city: presetCity,
     pickupMode: 'office',
     pickupDetail: '',
     returnMode: 'office',
@@ -65,6 +77,12 @@ export default function Book() {
       const next = { ...p, ...patch };
       // Keep the return date from sitting before the pickup date.
       if (patch.pickupDate && next.returnDate && next.returnDate < patch.pickupDate) next.returnDate = patch.pickupDate;
+      // Changing city resets handover options that the new city does not offer.
+      if (patch.city) {
+        const allowed = modesFor(patch.city).map(([k]) => k);
+        if (!allowed.includes(next.pickupMode)) { next.pickupMode = 'office'; next.pickupDetail = ''; }
+        if (!allowed.includes(next.returnMode)) { next.returnMode = 'office'; next.returnDetail = ''; }
+      }
       return next;
     });
     setErrors((e) => {
@@ -100,7 +118,7 @@ export default function Book() {
     if (!vehicle) return setStep(0);
     setSubmitError('');
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 600)); // brief, visible "sending" state
+    await new Promise((r) => setTimeout(r, 300)); // brief, visible "preparing" state
     try {
       const enq = addEnquiry({
         customer: { name: f.name.trim(), mobile: normalizeMobile(f.mobile), email: f.email.trim() },
@@ -115,6 +133,7 @@ export default function Book() {
         returnMode: f.returnMode,
         returnDetail: f.returnDetail.trim(),
         tripType: f.tripType,
+        city: f.city,
         destination: f.destination.trim(),
         notes: f.notes.trim(),
         estimate: est,
@@ -126,7 +145,7 @@ export default function Book() {
     }
   };
 
-  const modes = CONFIG.deliveryEnabled ? Object.entries(MODE_LABELS) : [['office', MODE_LABELS.office]];
+  const modes = modesFor(f.city);
   const shownCars = catalogue.filter((v) => catFilter === 'all' || v.category === catFilter);
   const cur = STEPS[step];
 
@@ -202,6 +221,15 @@ export default function Book() {
             {/* ---------- Step 3: places ---------- */}
             {step === 2 && (
               <div className="stack">
+                <div className="field">
+                  <span className="label" id="city-label">Pickup city</span>
+                  <div className="seg three" role="group" aria-labelledby="city-label">
+                    {CITIES.map((c) => (
+                      <button key={c.id} type="button" aria-pressed={f.city === c.id} onClick={() => set({ city: c.id })}>{c.name}</button>
+                    ))}
+                  </div>
+                  {errors.city && <span className="error" role="alert">{errors.city}</span>}
+                </div>
                 <div className="form-grid">
                   <Field label="Pickup" htmlFor="pm">
                     <select id="pm" value={f.pickupMode} onChange={(e) => set({ pickupMode: e.target.value })}>
@@ -210,22 +238,24 @@ export default function Book() {
                   </Field>
                   {(f.pickupMode === 'home' || f.pickupMode === 'hotel') && (
                     <Field label="Pickup address or landmark" error={errors.pickupDetail} htmlFor="pdt">
-                      <input id="pdt" value={f.pickupDetail} className={errors.pickupDetail ? 'invalid' : ''} onChange={(e) => set({ pickupDetail: e.target.value })} placeholder="e.g. hotel name or area in Vijayawada" />
+                      <input id="pdt" value={f.pickupDetail} className={errors.pickupDetail ? 'invalid' : ''} onChange={(e) => set({ pickupDetail: e.target.value })} placeholder={`e.g. hotel name or area in ${CITY_NAMES[f.city]}`} />
                     </Field>
                   )}
                   <Field label="Return" htmlFor="rm">
                     <select id="rm" value={f.returnMode} onChange={(e) => set({ returnMode: e.target.value })}>
-                      {modes.map(([k, l]) => <option key={k} value={k}>{l.replace('Delivery to', 'Collect from')}</option>)}
+                      {modes.map(([k, l]) => <option key={k} value={k}>{l.replace('Delivery to my', 'Collect from my')}</option>)}
                     </select>
                   </Field>
                   {(f.returnMode === 'home' || f.returnMode === 'hotel') && (
                     <Field label="Return address or landmark" error={errors.returnDetail} htmlFor="rdt">
-                      <input id="rdt" value={f.returnDetail} className={errors.returnDetail ? 'invalid' : ''} onChange={(e) => set({ returnDetail: e.target.value })} placeholder="e.g. hotel name or area in Vijayawada" />
+                      <input id="rdt" value={f.returnDetail} className={errors.returnDetail ? 'invalid' : ''} onChange={(e) => set({ returnDetail: e.target.value })} placeholder={`e.g. hotel name or area in ${CITY_NAMES[f.city]}`} />
                     </Field>
                   )}
                 </div>
                 <div className="notice">
-                  Aman’s website lists home, hotel, railway station and Gannavaram Airport delivery in Vijayawada, or collection from the MG Road office.
+                  {f.city === 'vijayawada'
+                    ? 'Aman’s website lists home, hotel, railway station and Gannavaram Airport delivery in Vijayawada, or collection from the MG Road office.'
+                    : `For ${CITY_NAMES[f.city]}, Aman’s website lists the office address and asks you to message the team for other pickup options.`}{' '}
                   Delivery charges and timing: please contact Aman Self Drive for confirmation.
                 </div>
               </div>
@@ -267,7 +297,7 @@ export default function Book() {
                 <div className="notice warn">
                   Please do not enter Aadhaar, licence or other ID details. If needed, the Aman Self Drive team verifies documents directly.
                 </div>
-                <div className="notice">Concept demo: please use a test name and number rather than real personal details.</div>
+                {CONFIG.demoMode && <div className="notice">Preview build: please use a test name and number rather than real personal details.</div>}
               </div>
             )}
 
@@ -277,8 +307,8 @@ export default function Book() {
                 <SummaryList f={f} vehicle={vehicle} hours={hours} />
                 <EstimateBox est={est} />
                 <div className="notice">
-                  Your booking request is saved in this browser and a WhatsApp message is prepared for you. The Aman Self Drive team reviews
-                  requests they receive and confirms availability and final pricing. This request is <strong>not</strong> a confirmed rental.
+                  Next you get a WhatsApp message with all of these details filled in. The request reaches Aman Self Drive only when you press
+                  Send in WhatsApp; the team then confirms availability and the final price. This is <strong>not</strong> a confirmed rental.
                 </div>
                 {submitError && <div className="notice warn" role="alert">{submitError}</div>}
               </div>
@@ -295,7 +325,7 @@ export default function Book() {
               <button className="btn btn-primary" onClick={() => go(1)}>Continue →</button>
             ) : (
               <button className="btn btn-primary" onClick={submit} disabled={submitting}>
-                {submitting ? 'Sending…' : 'Submit Booking Request'}
+                {submitting ? 'Preparing…' : 'Prepare WhatsApp Enquiry'}
               </button>
             )}
           </div>
@@ -336,8 +366,9 @@ function SummaryList({ f, vehicle, hours }) {
       <dt>Pickup</dt><dd>{fmtWhen(f.pickupDate, f.pickupTime)}</dd>
       <dt>Return</dt><dd>{fmtWhen(f.returnDate, f.returnTime)}</dd>
       <dt>Duration</dt><dd>{formatDuration(hours)}</dd>
-      <dt>Pickup at</dt><dd>{locationText(f.pickupMode, f.pickupDetail)}</dd>
-      <dt>Return at</dt><dd>{locationText(f.returnMode, f.returnDetail)}</dd>
+      <dt>City</dt><dd>{CITY_NAMES[f.city]}</dd>
+      <dt>Pickup at</dt><dd>{locationText(f.pickupMode, f.pickupDetail, f.city)}</dd>
+      <dt>Return at</dt><dd>{locationText(f.returnMode, f.returnDetail, f.city)}</dd>
       <dt>Trip</dt><dd>{f.tripType === 'city' ? 'Within the city' : 'Outstation'} · {f.destination}</dd>
       {f.notes.trim() && (<><dt>Notes</dt><dd>{f.notes}</dd></>)}
       <dt>Name</dt><dd>{f.name}</dd>
