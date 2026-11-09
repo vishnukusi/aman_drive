@@ -3,7 +3,7 @@
 
 > **Concept demonstration by ComputeX.** Not an official or integrated product of Aman Self Drive. No connection to their systems.
 
-**Live preview:** https://aman-drive-gold.vercel.app (Vercel, `noindex`, shows a "Preview build" notice) · **Repository:** https://github.com/vishnukusi/aman_drive (`main`)
+**Live preview:** https://aman-drive-gold.vercel.app (Vercel + Turso database; DriveFlow API live in demo mode; `noindex`, shows a "Preview build" notice; staff password is private, see `docs/DEPLOYMENT_REPORT.md`) · **Repository:** https://github.com/vishnukusi/aman_drive (`main`)
 
 ## What it does
 Customer picks a car → DriveFlow collects dates, pickup/return, destination and contact details → an enquiry with a unique ID is saved → customer sends a prefilled WhatsApp message → staff review it in a dashboard, update the status and reply on WhatsApp → final confirmation is always given by a human.

@@ -70,3 +70,35 @@ Once connected: every push to `main` builds and deploys to `https://aman-drive-g
 | D3 | 7-seater late-return rate ₹400 vs ₹600 | Unresolved: FAQ shows both and says "confirm with the team" |
 | D4 | Car availability in Hyderabad and Vizag | Unresolved: "confirmed on WhatsApp" |
 | D5–D10 | Hours, Premium rule, domain, DriveFlow/WhatsApp API, documents list, privacy notice | See `docs/FINAL_COMPLETION_REPORT.md` |
+
+---
+
+## Update, 9 Nov 2026: DriveFlow backend deployed
+
+| Item | Value |
+|---|---|
+| Live URL | **https://aman-drive-gold.vercel.app** (same project, now with the API) |
+| Deployed commit | `6b31d95` (on top of `29d4292`, the automation backend) |
+| API | Vercel Serverless Function `api/index.js`; `vercel.json` rewrites `/api/*` to it |
+| Database | **Turso** (hosted libSQL) via the Vercel Marketplace, free plan, resource `aman-driveflow`, connected to project `aman-drive` |
+| Environment variables | `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (created by the integration); `SESSION_SECRET` and `DEMO_STAFF_PASSWORD` (random, encrypted, production + preview). None are in the repository |
+| Mode | Demo mode on: fictional demo enquiries are seeded and labelled; preview banner and `noindex` kept |
+| Staff password | Random per deployment; stored on Vercel and in the git-ignored local file `staff-login.local.txt`. The demo password in the README is **rejected** live (verified) |
+
+### Live verification (built-in browser, Claude in Chrome unavailable)
+
+1. `GET /api/health` → 200, `database: libsql-remote`, rule-based intake, WhatsApp `manual`.
+2. `GET /api/staff/summary` without a session → 401; `POST /api/staff/login` with the public README password → 401.
+3. Home → **Describe your trip**: "Need a Creta in Vijayawada from tomorrow for 2 days, trip to Amaravati" (name "Test Live Check", fictional 9000000099) →
+   extracted car, city, 10–12 Nov, destination → saved as **DF-H5GMP2**, automatically moved to *Staff review*.
+4. Private tracking link → stages done/done/current; mobile shown as ******0099.
+5. Staff (signed in by the account owner) → enquiry workspace showed the sentence, extracted fields, allowed actions and
+   "Enquiry received: not configured" for WhatsApp.
+6. **Prepare quote** ₹6,000 → the customer's open tracking page changed to *Quote ready, ₹6,000* without reloading.
+7. Test enquiry **cancelled** with the note "Test enquiry created by COMPUTEX to verify the live deployment; not a real customer."
+
+### Remaining
+
+* Push-to-deploy still requires the repository owner (vishnukusi) to grant Vercel's GitHub App access; deploy manually with `npx vercel@65.12.1 deploy --prod`.
+* WhatsApp Business API, LLM and the client approvals listed above are unchanged.
+* Before handing the dashboard to Aman's real staff: set `DEMO_MODE=false` and `STAFF_ADMIN_PASSWORD`, reset the database, and publish a privacy notice.
