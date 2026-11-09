@@ -3,6 +3,8 @@
 
 > **Concept demonstration by ComputeX.** Not an official or integrated product of Aman Self Drive. No connection to their systems.
 
+**Live preview:** https://aman-drive-gold.vercel.app (Vercel, `noindex`, shows a "Preview build" notice) · **Repository:** https://github.com/vishnukusi/aman_drive (`main`)
+
 ## What it does
 Customer picks a car → DriveFlow collects dates, pickup/return, destination and contact details → an enquiry with a unique ID is saved → customer sends a prefilled WhatsApp message → staff review it in a dashboard, update the status and reply on WhatsApp → final confirmation is always given by a human.
 
@@ -14,7 +16,9 @@ Their website already sends customers to WhatsApp to book and says availability 
 **Staff dashboard** (`/#/admin`): overview cards, searchable/filterable enquiry table, enquiry detail with six manual statuses, confirmation indicator, notes, history, "Open WhatsApp Conversation", vehicle manager (add / edit / hide / rates), and a production roadmap page.
 
 ## Run it
+Requirements: Node.js 20+ and npm (tested with Node 26.2, npm 11.13).
 ```bash
+git clone https://github.com/vishnukusi/aman_drive.git && cd aman_drive
 npm install
 npm run dev        # http://localhost:5173
 npm test           # 42 unit tests (pricing, validation, WhatsApp messages, enquiry service, data)
@@ -33,7 +37,7 @@ React 18, React Router 7 (hash routing), Vite 8, plain CSS with design tokens, n
 ## Simulated vs real
 | Real in the demo | Simulated / not implemented |
 |---|---|
-| Catalogue names, photos (hot-linked) and rates from Aman's site | Live fleet availability (**none**; "visible" ≠ available) |
+| Catalogue names, photos (self-hosted copies) and rates from Aman's site | Live fleet availability (**none**; "visible" ≠ available) |
 | Date validation, duration and estimate maths | Automatic booking confirmation (**never**; staff only) |
 | Enquiry saving, unique IDs, persistence across refresh | Payments |
 | Search, filters, status workflow, notes, vehicle edits | WhatsApp Business API / automatic replies (the link only opens WhatsApp; the customer presses Send) |
@@ -41,6 +45,23 @@ React 18, React Router 7 (hash routing), Vite 8, plain CSS with design tokens, n
 | | Real security: the admin login is a client-side gate; storage is per browser, so a phone and a laptop do not share enquiries |
 
 No ID documents or sensitive data are requested. Use fictional test details when presenting.
+
+## Deployment
+Hosted on **Vercel** (Hobby), project `aman-drive`, production URL https://aman-drive-gold.vercel.app. Settings live in `vercel.json` (Vite preset, `npm ci`, `npm run build`, output `dist`, `noindex` header, long cache for hashed assets). No Vercel environment variables are set, so the deployment stays in preview mode.
+
+Deploy manually from the project folder:
+```bash
+npx vercel@65.12.1 deploy --prod
+```
+Push-to-deploy is **not active yet**: Vercel's GitHub App needs access to `vishnukusi/aman_drive` (granted by the repo owner). Details and the full verification log: `docs/DEPLOYMENT_REPORT.md`.
+
+Do not attach amanselfdrivecars.com, change DNS or set `VITE_DEMO_MODE=false` without the client's written approval.
+
+## Known limitations
+- Preview only: `noindex`, preview banner, demo staff dashboard with a client-side login gate.
+- Enquiries are stored in the visitor's browser; the business receives them only when the customer presses Send in WhatsApp. No live availability, payments or WhatsApp Business API.
+- Hash routes (`#/cars`) are not individually indexable; mobile Lighthouse performance is 79 (client-rendered). Prerendering is the recommended next step.
+- Open client decisions (photo permission, preview notice, ₹400/₹600 late-return conflict, availability per city): `docs/FINAL_COMPLETION_REPORT.md`.
 
 ## Production roadmap
 See `/#/admin/roadmap` in the app. Short version: Phase 2 needs Aman's verified fleet and pricing rules, a real database with authentication, and an approved WhatsApp Business account (Meta credentials, templates, opt-in, fees); Phase 3 builds notifications, reminders and reporting on that. None of it can start without the business's permission and data.
