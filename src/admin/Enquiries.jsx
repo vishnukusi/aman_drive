@@ -1,75 +1,85 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useStore } from '../store.js';
-import { STATUSES } from '../config.js';
-import { StatusBadge, SimBadge } from '../components/ui.jsx';
-import { fmtWhen } from '../lib/whatsapp.js';
-import { inr } from '../lib/pricing.js';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { api, CITY_LABEL, fmtDay, fmtWhenIso, STATUS_META } from '../api/client.js';
+import { LiveDot, useLiveData } from './live.jsx';
+import { SourceTag, StatusPill } from './parts.jsx';
 
 export default function Enquiries() {
-  const { enquiries } = useStore();
   const nav = useNavigate();
-  const [q, setQ] = useState('');
-  const [status, setStatus] = useState('all');
-  const [source, setSource] = useState('all');
+  const [params, setParams] = useSearchParams();
+  const status = params.get('status') || '';
+  const city = params.get('city') || '';
+  const qParam = params.get('q') || '';
+  const [q, setQ] = useState(qParam);
+  useEffect(() => setQ(qParam), [qParam]);
 
-  const rows = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return enquiries
-      .filter((e) => status === 'all' || e.status === status)
-      .filter((e) => source === 'all' || (source === 'sim' ? e.simulated : !e.simulated))
-      .filter((e) => {
-        if (!needle) return true;
-        return [e.id, e.customer.name, e.customer.mobile, e.vehicleName, e.destination].join(' ').toLowerCase().includes(needle);
-      })
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [enquiries, q, status, source]);
+  const { data, error, lastSync } = useLiveData(
+    () => api(`/api/staff/enquiries?${new URLSearchParams({ q: qParam, status, city, limit: '100' })}`),
+    [qParam, status, city],
+  );
+
+  const set = (k, v) => {
+    const next = new URLSearchParams(params);
+    v ? next.set(k, v) : next.delete(k);
+    setParams(next, { replace: true });
+  };
 
   return (
-    <div className="stack">
-      <h2>Enquiries</h2>
-      <div className="card row" style={{ gap: 10 }}>
-        <input style={{ maxWidth: 320 }} type="search" placeholder="Search ID, name, mobile, car, destination" aria-label="Search enquiries" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select style={{ maxWidth: 260 }} aria-label="Filter by status" value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="all">All statuses</option>
-          {STATUSES.map((s) => <option key={s}>{s}</option>)}
-        </select>
-        <select style={{ maxWidth: 200 }} aria-label="Filter by source" value={source} onChange={(e) => setSource(e.target.value)}>
-          <option value="all">All sources</option>
-          <option value="live">Submitted in demo</option>
-          <option value="sim">Simulated only</option>
-        </select>
-        <span className="small muted" aria-live="polite">{rows.length} shown</span>
+    <div className="ops stack-lg">
+      <div className="row spread">
+        <div>
+          <h1 className="h2">Enquiry inbox</h1>
+          <p className="muted small">Search by tracking reference, customer, mobile, car or destination.</p>
+        </div>
+        <LiveDot lastSync={lastSync} />
       </div>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Enquiry ID</th><th>Customer</th><th>Mobile</th><th>Vehicle</th><th>Pickup</th><th>Return</th>
-              <th>Duration</th><th>Destination</th><th>Estimate</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((e) => (
-              <tr key={e.id} className="click" tabIndex={0} onClick={() => nav(`/admin/enquiries/${e.id}`)} onKeyDown={(ev) => ev.key === 'Enter' && nav(`/admin/enquiries/${e.id}`)}>
-                <td><strong>{e.id}</strong></td>
-                <td>{e.customer.name} {e.simulated && <SimBadge />}</td>
-                <td>{e.customer.mobile}</td>
-                <td>{e.vehicleName}</td>
-                <td>{fmtWhen(e.pickup.date, e.pickup.time)}</td>
-                <td>{fmtWhen(e.ret.date, e.ret.time)}</td>
-                <td>{e.durationLabel}</td>
-                <td>{e.destination}</td>
-                <td>{e.estimate ? inr(e.estimate.amount) : '—'}</td>
-                <td><StatusBadge status={e.status} /></td>
-              </tr>
-            ))}
-            {!rows.length && <tr><td colSpan={10}><div className="empty" style={{ border: 0 }}>No enquiries match.</div></td></tr>}
-          </tbody>
-        </table>
-      </div>
-      <p className="small muted">Estimates are indicative figures from published rates, not quotations.</p>
+      <form className="toolbar" onSubmit={(e) => { e.preventDefault(); set('q', q.trim()); }} role="search">
+        <input className="search" placeholder="Search e.g. DF-A7K92X, Creta, 3210" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search enquiries" />
+        <select value={status} onChange={(e) => set('status', e.target.value)} aria-label="Filter by status">
+          <option value="">All statuses</option>
+          {Object.entries(STATUS_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+        <select value={city} onChange={(e) => set('city', e.target.value)} aria-label="Filter by city">
+          <option value="">All cities</option>
+          {Object.entries(CITY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <button className="btn btn-dark btn-sm" type="submit">Search</button>
+        {(qParam || status || city) && <button type="button" className="linkish" onClick={() => setParams({}, { replace: true })}>Clear</button>}
+      </form>
+
+      {error && !data && <div className="notice warn">{error.message}</div>}
+      {data && (
+        <>
+          <p className="small muted" aria-live="polite">{data.total} enquir{data.total === 1 ? 'y' : 'ies'}</p>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Reference</th><th>Customer</th><th>Car</th><th>City</th><th>Pickup → return</th><th>Source</th><th>Status</th><th>Created</th><th>Last update</th></tr>
+              </thead>
+              <tbody>
+                {data.items.map((e) => (
+                  <tr key={e.reference} className="click" onClick={() => nav(`/admin/enquiries/${e.reference}`)}>
+                    <td><Link to={`/admin/enquiries/${e.reference}`} className="mono ref-link" onClick={(ev) => ev.stopPropagation()}>{e.reference}</Link></td>
+                    <td>
+                      <div>{e.customer.name} {e.isDemo && <span className="badge sim">Demo</span>}</div>
+                      <div className="small muted">{e.customer.mobile}</div>
+                    </td>
+                    <td>{e.vehicle?.name || <span className="muted">Not chosen</span>}</td>
+                    <td>{CITY_LABEL[e.city] || <span className="muted">—</span>}</td>
+                    <td className="small">{e.pickup.date ? `${fmtDay(e.pickup.date)} → ${fmtDay(e.ret.date)}` : <span className="muted">Dates missing</span>}</td>
+                    <td><SourceTag source={e.source} /></td>
+                    <td><StatusPill status={e.status} /></td>
+                    <td className="small muted">{fmtWhenIso(e.createdAt)}</td>
+                    <td className="small muted">{fmtWhenIso(e.updatedAt)}</td>
+                  </tr>
+                ))}
+                {!data.items.length && <tr><td colSpan={9} className="center muted" style={{ padding: 28 }}>No enquiries match.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

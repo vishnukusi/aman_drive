@@ -11,3 +11,4 @@ dist-seo
 .vercel
 .env*
 !.env.example
+data/

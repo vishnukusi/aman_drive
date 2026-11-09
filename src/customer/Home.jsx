@@ -13,6 +13,8 @@ import VehicleCard from '../components/VehicleCard.jsx';
 import VehicleDetails from '../components/VehicleDetails.jsx';
 import EnquiryForm, { EnquirySheet } from '../components/EnquiryForm.jsx';
 import Icon from '../components/Icon.jsx';
+import IntakeAssistant from '../components/IntakeAssistant.jsx';
+import { useBackend } from '../api/client.js';
 import { scrollToSection } from './CustomerLayout.jsx';
 
 const GENERAL_WA = 'Hi, I want to book a self drive car';
@@ -348,6 +350,9 @@ function About() {
 
 /* ------------------------------------------------------------------ Quick enquiry */
 function QuickEnquiry() {
+  const backend = useBackend();
+  const { vehicles } = useStore();
+  const [mode, setMode] = useState('form');
   return (
     <section className="section enquire-band" id="enquire" aria-labelledby="enq-title">
       <div className="container enquire-grid">
@@ -355,16 +360,24 @@ function QuickEnquiry() {
           <div className="eyebrow" data-stagger>Quick enquiry</div>
           <h2 id="enq-title" data-stagger>Tell us the car, the dates and your city</h2>
           <p data-stagger>
-            We open WhatsApp with every detail filled in, so the team can reply with availability and the final price without asking twice.
+            {backend.available
+              ? 'DriveFlow saves your enquiry, gives you a tracking reference and checks what is still missing, so the team can reply with availability and the final price without asking twice.'
+              : 'We open WhatsApp with every detail filled in, so the team can reply with availability and the final price without asking twice.'}
           </p>
           <ul className="enq-points" data-stagger>
             <li><Icon name="check" size={16} />No account, no app, no payment here</li>
-            <li><Icon name="check" size={16} />You see the message before you send it</li>
+            <li><Icon name="check" size={16} />{backend.available ? 'A tracking reference the moment it is saved' : 'You see the message before you send it'}</li>
             <li><Icon name="check" size={16} />The team confirms every booking personally</li>
           </ul>
         </Reveal>
         <div className="enquire-card">
-          <EnquiryForm idPrefix="home" />
+          {backend.available && (
+            <div className="seg mode-switch" role="tablist" aria-label="How do you want to enquire?">
+              <button type="button" role="tab" aria-selected={mode === 'form'} aria-pressed={mode === 'form'} onClick={() => setMode('form')}>Fill a form</button>
+              <button type="button" role="tab" aria-selected={mode === 'chat'} aria-pressed={mode === 'chat'} onClick={() => setMode('chat')}>Describe your trip</button>
+            </div>
+          )}
+          {backend.available && mode === 'chat' ? <IntakeAssistant vehicles={vehicles} /> : <EnquiryForm idPrefix="home" />}
         </div>
       </div>
     </section>

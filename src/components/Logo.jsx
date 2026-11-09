@@ -10,6 +10,7 @@ export default function Logo({ height = 52, plate = false, className = '' }) {
       width={Math.round(height * 1.5)}
       height={height}
       alt="Aman Self Drive Car Rentals"
+      style={{ height, width: 'auto' }}
       className={`logo-img ${className}`}
       decoding="async"
     />

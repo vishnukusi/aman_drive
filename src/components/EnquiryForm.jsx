@@ -7,6 +7,8 @@ import { CITIES } from '../data/business.js';
 import { todayISO } from '../lib/validation.js';
 import { submitEnquiry } from '../services/enquiry.js';
 import { CONFIG } from '../config.js';
+import { api, useBackend } from '../api/client.js';
+import EnquiryReceipt from './EnquiryReceipt.jsx';
 
 const addDays = (iso, n) => {
   const d = new Date(`${iso}T00:00`);
@@ -15,8 +17,11 @@ const addDays = (iso, n) => {
 };
 
 /**
- * One-screen enquiry that hands off to WhatsApp with every detail prefilled.
- * Honest by construction: it never says "booked" or "available"; the customer still presses Send in WhatsApp.
+ * One-screen enquiry.
+ *  - Backend available: the enquiry is saved by the DriveFlow API, which issues the tracking reference after saving and runs the
+ *    automated intake. The customer then gets a tracking link and can message Aman on WhatsApp quoting the reference.
+ *  - No backend (static preview): falls back to the WhatsApp hand-off with every detail prefilled; nothing is stored.
+ * Never says "booked" or "available".
  */
 export default function EnquiryForm({ vehicleId = '', city = '', compact = false, idPrefix = 'q' }) {
   const { vehicles } = useStore();
@@ -34,6 +39,11 @@ export default function EnquiryForm({ vehicleId = '', city = '', compact = false
   });
   const [errors, setErrors] = useState({});
   const [sent, setSent] = useState(null);
+  const [created, setCreated] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [optIn, setOptIn] = useState(false);
+  const [serverError, setServerError] = useState('');
+  const backend = useBackend();
 
   const set = (patch) => {
     setF((p) => {
@@ -48,18 +58,37 @@ export default function EnquiryForm({ vehicleId = '', city = '', compact = false
     });
   };
 
-  const submit = (ev) => {
+  const showErrors = (errs) => {
+    setErrors(errs);
+    const first = Object.keys(errs)[0];
+    document.getElementById(`${idPrefix}-${first}`)?.focus();
+  };
+
+  const submit = async (ev) => {
     ev.preventDefault();
-    const res = submitEnquiry({ ...f, source: compact ? 'vehicle-card' : 'home-quick-enquiry' }, vehicles);
-    if (!res.ok) {
-      setErrors(res.errors);
-      const first = Object.keys(res.errors)[0];
-      document.getElementById(`${idPrefix}-${first}`)?.focus();
+    setServerError('');
+    const source = compact ? 'vehicle-card' : 'website-quick';
+    // Same deterministic checks as the server, so obvious mistakes never leave the browser.
+    const res = submitEnquiry({ ...f, source }, vehicles);
+    if (!res.ok) return showErrors(res.errors);
+    if (backend.available) {
+      setBusy(true);
+      try {
+        const out = await api('/api/enquiries', { method: 'POST', body: { ...f, source, whatsappOptIn: optIn } });
+        setCreated(out);
+      } catch (err) {
+        if (Object.keys(err.fields || {}).length) showErrors(err.fields);
+        setServerError(err.message);
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     window.open(res.result.url, '_blank', 'noopener,noreferrer');
     setSent(res.result);
   };
+
+  if (created) return <EnquiryReceipt created={created} onReset={() => setCreated(null)} />;
 
   if (sent) {
     return (
@@ -117,10 +146,23 @@ export default function EnquiryForm({ vehicleId = '', city = '', compact = false
           <input id={id('notes')} value={f.notes} className={err('notes')} onChange={(e) => set({ notes: e.target.value })} placeholder="e.g. one-way to Hyderabad, need an automatic" maxLength={500} />
         </Field>
       </div>
+      {backend.available && (
+        <label className="check">
+          <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
+          <span>Send me updates about this enquiry on WhatsApp (optional).</span>
+        </label>
+      )}
+      {serverError && <div className="notice warn" role="alert" style={{ marginTop: 12 }}>{serverError}</div>}
       <div className="enq-foot">
-        <button type="submit" className="btn btn-wa btn-lg"><Icon name="whatsapp" size={20} /> Continue on WhatsApp</button>
+        {backend.available ? (
+          <button type="submit" className="btn btn-primary btn-lg" disabled={busy}>{busy ? 'Saving…' : 'Send enquiry'} {!busy && <Icon name="arrow" size={18} />}</button>
+        ) : (
+          <button type="submit" className="btn btn-wa btn-lg"><Icon name="whatsapp" size={20} /> Continue on WhatsApp</button>
+        )}
         <p className="hint">
-          Opens WhatsApp to {CONFIG.phoneDisplay} with these details filled in. Please do not share ID documents here. Need times, delivery
+          {backend.available
+            ? 'DriveFlow saves your enquiry and gives you a tracking reference. The team replies with availability and the final price.'
+            : `Opens WhatsApp to ${CONFIG.phoneDisplay} with these details filled in.`}{' '}Please do not share ID documents here. Need times, delivery
           and an estimate? <Link to={f.vehicleId ? `/book?car=${f.vehicleId}` : '/book'}>Use the trip planner</Link>.
         </p>
       </div>

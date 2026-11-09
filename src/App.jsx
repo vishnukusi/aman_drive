@@ -42,6 +42,7 @@ export default function App() {
             <Route path="book" element={<Book />} />
             <Route path="enquiry/:id" element={<Confirmation />} />
             <Route path="track" element={<Track />} />
+            <Route path="track/:ref" element={<Track />} />
           </Route>
           <Route path="admin/login" element={<AdminLogin />} />
           <Route path="admin" element={<AdminLayout />}>

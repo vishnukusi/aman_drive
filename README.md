@@ -21,13 +21,11 @@ Requirements: Node.js 20+ and npm (tested with Node 26.2, npm 11.13).
 git clone https://github.com/vishnukusi/aman_drive.git && cd aman_drive
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 42 unit tests (pricing, validation, WhatsApp messages, enquiry service, data)
+npm test           # 75 tests: 42 website logic + 33 backend (API, workflow, auth, privacy, WhatsApp, intake, end-to-end)
 npm run images     # re-download Aman's photos/logo and regenerate public/images (needs network)
 npm run build && npm run preview
 ```
 Routes use `#/` so the build works on any static host.
-
-**Demo admin login:** `admin` / `driveflow` (open `/#/admin`, or "Staff dashboard (demo)" in the footer).
 
 Configuration (optional, see `.env.example`): `VITE_WHATSAPP_NUMBER`, `VITE_PHONE_DISPLAY`, `VITE_EMAIL`, `VITE_DEMO_MODE`, `VITE_SITE_URL` (enables canonical, robots and sitemap; without it the build is `noindex`), `VITE_ENQUIRY_CHANNEL`, `VITE_ADMIN_USER`, `VITE_ADMIN_PASS`, `VITE_DELIVERY_ENABLED`. Default WhatsApp number is the one on amanselfdrivecars.com (919581378999). Re-check it against the site before each meeting.
 
@@ -39,10 +37,10 @@ React 18, React Router 7 (hash routing), Vite 8, plain CSS with design tokens, n
 |---|---|
 | Catalogue names, photos (self-hosted copies) and rates from Aman's site | Live fleet availability (**none**; "visible" ≠ available) |
 | Date validation, duration and estimate maths | Automatic booking confirmation (**never**; staff only) |
-| Enquiry saving, unique IDs, persistence across refresh | Payments |
+| Enquiry saving in a server database, server-issued tracking references (with the API running) | Payments |
 | Search, filters, status workflow, notes, vehicle edits | WhatsApp Business API / automatic replies (the link only opens WhatsApp; the customer presses Send) |
 | `wa.me` links with prefilled text | Any link to the business's systems or real bookings |
-| | Real security: the admin login is a client-side gate; storage is per browser, so a phone and a laptop do not share enquiries |
+| Staff sign-in with server sessions and roles (with the API running) | LLM/AI model (intake is rule-based) · hosted production database (not provisioned yet) |
 
 No ID documents or sensitive data are requested. Use fictional test details when presenting.
 
@@ -62,6 +60,20 @@ Do not attach amanselfdrivecars.com, change DNS or set `VITE_DEMO_MODE=false` wi
 - Enquiries are stored in the visitor's browser; the business receives them only when the customer presses Send in WhatsApp. No live availability, payments or WhatsApp Business API.
 - Hash routes (`#/cars`) are not individually indexable; mobile Lighthouse performance is 79 (client-rendered). Prerendering is the recommended next step.
 - Open client decisions (photo permission, preview notice, ₹400/₹600 late-return conflict, availability per city): `docs/FINAL_COMPLETION_REPORT.md`.
+
+## DriveFlow automation backend
+The enquiry workflow now runs on a real API and database (see `docs/AUTOMATION_ARCHITECTURE.md`, `docs/ENQUIRY_LIFECYCLE.md`,
+`docs/WHATSAPP_INTEGRATION.md`, `docs/FINAL_AUTOMATION_REPORT.md`).
+
+```bash
+npm run api        # DriveFlow API on http://localhost:8787 (creates ./data/driveflow.db, seeds demo data)
+npm run dev        # website on http://localhost:5173; /api is proxied to :8787
+```
+Then: enquire on the home page (form or **Describe your trip**), open the tracking link, and sign in at `#/admin/login` as
+`admin`, `staff` or `viewer` (read-only); demo password `driveflow-demo` (`DEMO_STAFF_PASSWORD`). Demo enquiries are fictional and labelled.
+
+Without a reachable API (e.g. the current static Vercel deployment) the website falls back to its WhatsApp-only behaviour and the staff
+dashboard says the server is not connected. Server configuration lives in `.env.example` (server variables are never `VITE_`).
 
 ## Production roadmap
 See `/#/admin/roadmap` in the app. Short version: Phase 2 needs Aman's verified fleet and pricing rules, a real database with authentication, and an approved WhatsApp Business account (Meta credentials, templates, opt-in, fees); Phase 3 builds notifications, reminders and reporting on that. None of it can start without the business's permission and data.

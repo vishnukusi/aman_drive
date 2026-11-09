@@ -36,7 +36,9 @@ export default defineConfig(({ mode }) => {
   return {
     base: './',
     plugins: [react(), seo(env)],
-    server: { host: true, port: 5173 },
+    // The DriveFlow API (npm run api) runs on :8787; proxying keeps the website and API on one origin, like production.
+    server: { host: true, port: 5173, proxy: { '/api': 'http://localhost:8787' } },
+    preview: { proxy: { '/api': 'http://localhost:8787' } },
     build: { target: 'es2020', cssCodeSplit: true },
   };
 });

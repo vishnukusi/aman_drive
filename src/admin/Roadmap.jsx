@@ -1,13 +1,14 @@
 const PHASES = [
   {
-    name: 'Phase 1 — Demonstration',
+    name: 'Phase 1 — Working automation (demo data)',
     tag: 'Built',
     items: [
-      ['Vehicle catalogue', 'Names, photos and published rates copied from amanselfdrivecars.com. Seats/category are generic for each model.'],
-      ['Guided rental enquiry', 'Six-step assistant with validation, duration calculation and an indicative estimate.'],
-      ['Enquiry management', 'Searchable table, status workflow, admin notes and history. Stored in the browser (localStorage).'],
-      ['WhatsApp redirection', 'A plain wa.me link with a prefilled message. Not an API integration; nothing is sent until the customer presses Send.'],
-      ['Simulated dashboard data', 'Seven clearly tagged fictional enquiries.'],
+      ['DriveFlow API + database', 'Every enquiry is saved server-side (libSQL) and shared by the website, tracking page and this dashboard.'],
+      ['Tracking references', 'Random DF-XXXXXX references issued by the server after the enquiry is saved; unique in the database.'],
+      ['Automated intake', 'Rule-based extraction from free text, missing-detail questions, car suggestions and indicative estimates from published rates. No AI model connected.'],
+      ['Enforced workflow', 'Nine statuses, allowed transitions only, version checks, and an audit event for every change.'],
+      ['Staff accounts and roles', 'Server-side sign-in (admin, staff, read-only viewer) with signed, HttpOnly sessions.'],
+      ['WhatsApp hand-off', 'Messages prepared from templates and opened in WhatsApp for staff to send; recorded as hand-offs, not deliveries. Meta Cloud API adapter ready but not connected.'],
     ],
   },
   {
@@ -17,7 +18,7 @@ const PHASES = [
       ['Verified fleet information', 'Needs: the owner’s actual fleet list, registration-level variants, seating, fuel, transmission and photos they approve.'],
       ['Actual pricing rules', 'Needs: decision on 12/24-hr slots, extra-hour and overrun billing, multi-day and monthly rates, deposits, kilometre overage, seasonal rates.'],
       ['Staff-controlled availability', 'Needs: a process for staff to mark cars booked/serviced, or read from their existing records. Without it, availability cannot be shown.'],
-      ['Secure database and authentication', 'Needs: hosting choice, a managed database, staff accounts with roles, backups and a privacy policy for customer data.'],
+      ['Hosted production database', 'Needs: approval to provision a hosted database (e.g. Turso), backups, and a privacy policy for customer data. Staff accounts and roles already exist.'],
       ['Authorised WhatsApp Business integration', 'Needs: a Meta Business account and verified number or a Business Solution Provider, API credentials, approved message templates, customer opt-in, per-conversation fees. The business’s current number would have to be migrated or a new one used — Aman must decide.'],
       ['Real booking notifications', 'Needs: the above WhatsApp access or an email/SMS provider, plus who in the team gets alerted and when.'],
     ],
@@ -26,7 +27,7 @@ const PHASES = [
     name: 'Phase 3 — Advanced automation',
     tag: 'Later',
     items: [
-      ['Automated enquiry notifications', 'Needs: Phase 2 messaging and a server; Aman’s approval of wording.'],
+      ['Automated enquiry notifications', 'Workflow hooks exist; needs Phase 2 WhatsApp access and Aman’s approval of template wording.'],
       ['Booking reminders', 'Needs: reliable booking records and approved reminder templates.'],
       ['Customer follow-ups', 'Needs: opt-in consent and agreed follow-up rules (when, how often).'],
       ['Cancellation and rescheduling workflows', 'Needs: the business’s cancellation and refund policy, which is not published and must come from Aman.'],
@@ -64,9 +65,9 @@ export default function Roadmap() {
           <li>No live fleet availability; “visible in catalogue” is not “available”.</li>
           <li>No automatic confirmation; only staff change statuses.</li>
           <li>No payments.</li>
-          <li>No WhatsApp Business API, no automatic replies; the customer sends the message themselves.</li>
-          <li>No connection to Aman Self Drive’s systems or booking records.</li>
-          <li>Storage is per browser, so a phone and a laptop do not share data. The admin login is a presentation gate, not security.</li>
+          <li>No WhatsApp Business API: messages are hand-off links that a person sends.</li>
+          <li>No AI model: intake is rule-based and always checked by deterministic validation.</li>
+          <li>No connection to Aman Self Drive’s own systems or booking records; enquiries marked Demo are fictional.</li>
         </ul>
       </div>
     </div>

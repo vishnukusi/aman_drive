@@ -10,6 +10,7 @@ import { normalizeMobile, todayISO, validateStep } from '../lib/validation.js';
 import { CITY_NAMES, fmtWhen, locationText, modeLabel } from '../lib/whatsapp.js';
 import { CITIES, cityById } from '../data/business.js';
 import { usePageMeta } from '../lib/meta.js';
+import { api, useBackend } from '../api/client.js';
 
 const STEPS = [
   { key: 'car', title: 'Pick your car', say: 'Which car would you like?', sub: 'Tap one to select it. You can change it later.' },
@@ -41,6 +42,7 @@ export default function Book() {
   const today = todayISO();
 
   usePageMeta('Plan your trip | Aman Self Drive Car Rentals', 'Choose a car, dates, city and pickup, see an indicative estimate and send a complete enquiry to Aman Self Drive on WhatsApp.');
+  const backend = useBackend();
   const preselected = catalogue.find((v) => v.id === params.get('car'));
   const presetCity = cityById(params.get('city'))?.id || 'vijayawada';
   const [step, setStep] = useState(preselected ? 1 : 0);
@@ -119,6 +121,27 @@ export default function Book() {
     setSubmitError('');
     setSubmitting(true);
     await new Promise((r) => setTimeout(r, 300)); // brief, visible "preparing" state
+    // With the DriveFlow server: the server validates again, saves the enquiry, issues the reference and runs the workflow.
+    if (backend.available) {
+      try {
+        const out = await api('/api/enquiries', {
+          method: 'POST',
+          body: {
+            source: 'website-wizard',
+            name: f.name.trim(), mobile: f.mobile, email: f.email.trim(),
+            vehicleId: vehicle.id, city: f.city,
+            pickupDate: f.pickupDate, pickupTime: f.pickupTime, returnDate: f.returnDate, returnTime: f.returnTime,
+            pickupMode: f.pickupMode, pickupDetail: f.pickupDetail.trim(), returnMode: f.returnMode, returnDetail: f.returnDetail.trim(),
+            tripType: f.tripType, destination: f.destination.trim(), notes: f.notes.trim(), whatsappOptIn: false,
+          },
+        });
+        nav(out.trackPath);
+      } catch (err) {
+        setSubmitError(err.message || 'Something went wrong. Please try again.');
+        setSubmitting(false);
+      }
+      return;
+    }
     try {
       const enq = addEnquiry({
         customer: { name: f.name.trim(), mobile: normalizeMobile(f.mobile), email: f.email.trim() },
@@ -307,8 +330,10 @@ export default function Book() {
                 <SummaryList f={f} vehicle={vehicle} hours={hours} />
                 <EstimateBox est={est} />
                 <div className="notice">
-                  Next you get a WhatsApp message with all of these details filled in. The request reaches Aman Self Drive only when you press
-                  Send in WhatsApp; the team then confirms availability and the final price. This is <strong>not</strong> a confirmed rental.
+                  {backend.available
+                    ? 'DriveFlow saves your enquiry and gives you a tracking reference. The Aman Self Drive team then reviews it and confirms availability and the final price. '
+                    : 'Next you get a WhatsApp message with all of these details filled in. The request reaches Aman Self Drive only when you press Send in WhatsApp; the team then confirms availability and the final price. '}
+                  This is <strong>not</strong> a confirmed rental.
                 </div>
                 {submitError && <div className="notice warn" role="alert">{submitError}</div>}
               </div>
@@ -325,7 +350,7 @@ export default function Book() {
               <button className="btn btn-primary" onClick={() => go(1)}>Continue →</button>
             ) : (
               <button className="btn btn-primary" onClick={submit} disabled={submitting}>
-                {submitting ? 'Preparing…' : 'Prepare WhatsApp Enquiry'}
+                {submitting ? (backend.available ? 'Saving…' : 'Preparing…') : backend.available ? 'Send Enquiry' : 'Prepare WhatsApp Enquiry'}
               </button>
             )}
           </div>

@@ -1,5 +1,8 @@
 # DriveFlow AI: integration readiness
 
+> **Superseded (9 Nov 2026).** The backend described as future work here now exists: see `docs/AUTOMATION_ARCHITECTURE.md`.
+> `src/services/enquiry.js` remains as the browser-side fallback used when no API is reachable.
+
 **Status: not connected.** No AI assistant runs on this website, and nothing on the site says one does. This document describes the seam
 that is already in place so DriveFlow can be connected later without rewriting the customer experience.
 

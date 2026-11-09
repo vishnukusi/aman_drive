@@ -21,9 +21,6 @@ export const CONFIG = {
   // Preview/demo mode: shows the "preview build" notice, the demo staff-dashboard link and the demo login hint.
   // Set VITE_DEMO_MODE=false only once the client approves this as their live website (audit decision D2).
   demoMode: env.VITE_DEMO_MODE !== 'false',
-  // Demo-only admin gate. Replace with real authentication in production.
-  adminUser: env.VITE_ADMIN_USER || 'admin',
-  adminPass: env.VITE_ADMIN_PASS || 'driveflow',
   maxRentalDays: 60,
 };
 

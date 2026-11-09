@@ -1,83 +1,106 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useStore } from '../store.js';
-import { STATUSES } from '../config.js';
-import { StatusBadge, SimBadge } from '../components/ui.jsx';
-import { fmtDate } from '../lib/whatsapp.js';
-import { inr } from '../lib/pricing.js';
+import { api, fmtWhenIso, STATUS_META, CITY_LABEL } from '../api/client.js';
+import { LiveDot, useLiveData } from './live.jsx';
+import { StatusPill, SourceTag } from './parts.jsx';
+
+const PIPELINE = ['RECEIVED', 'PROCESSING', 'DETAILS_PENDING', 'STAFF_REVIEW', 'QUOTE_READY', 'APPROVED', 'BOOKING_CONFIRMED'];
+const SOURCE_LABEL = { 'website-wizard': 'Trip planner', 'website-quick': 'Quick enquiry', 'vehicle-card': 'Car card', 'chat-intake': 'Describe your trip', 'demo-seed': 'Demo seed', staff: 'Staff', website: 'Website' };
 
 export default function Dashboard() {
-  const { enquiries } = useStore();
   const nav = useNavigate();
-  const count = (s) => enquiries.filter((e) => e.status === s).length;
-  const live = enquiries.filter((e) => !e.simulated).length;
-
+  const { data, error, lastSync } = useLiveData(async () => {
+    const [s, recent] = await Promise.all([api('/api/staff/summary'), api('/api/staff/enquiries?limit=8')]);
+    return { s, recent: recent.items };
+  });
+  if (error && !data) return <div className="notice warn">Could not load the dashboard: {error.message}</div>;
+  if (!data) return <div className="muted" role="status">Loading…</div>;
+  const { s, recent } = data;
   const cards = [
-    { l: 'Total enquiries', n: enquiries.length, s: `${live} submitted in this demo` },
-    { l: 'New', n: count('New Enquiry'), s: 'Need a first look', accent: count('New Enquiry') > 0 },
-    { l: 'Awaiting quotation', n: count('New Enquiry') + count('Under Review'), s: 'New + under review' },
-    { l: 'Awaiting customer', n: count('Quotation Sent') + count('Awaiting Customer Confirmation'), s: 'Quoted, waiting on reply' },
-    { l: 'Confirmed', n: count('Confirmed'), s: 'Marked by staff' },
-    { l: 'Cancelled', n: count('Cancelled'), s: '' },
+    { l: 'Total enquiries', n: s.total, sub: `${s.last24h} in the last 24 h${s.demo ? ` · ${s.demo} demo` : ''}` },
+    { l: 'New', n: s.cards.newEnquiries, sub: 'Received / processing', tone: 'blue' },
+    { l: 'Details pending', n: s.cards.detailsPending, sub: 'Waiting on the customer', tone: 'orange' },
+    { l: 'Staff review', n: s.cards.staffReview, sub: 'Needs your action', tone: 'amber', accent: s.cards.staffReview > 0, to: 'STAFF_REVIEW' },
+    { l: 'Quote ready', n: s.cards.quoteReady, sub: 'Shared with customer', tone: 'violet', to: 'QUOTE_READY' },
+    { l: 'Approved', n: s.cards.approved, sub: 'Verify docs & deposit', tone: 'blue', to: 'APPROVED' },
+    { l: 'Bookings confirmed', n: s.cards.confirmed, sub: 'Confirmed by staff', tone: 'green', to: 'BOOKING_CONFIRMED' },
   ];
-  const recent = [...enquiries].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 6);
-  const max = Math.max(1, ...STATUSES.map(count));
+  const max = Math.max(1, ...PIPELINE.map((k) => s.byStatus[k]));
+  const comm = s.communications || {};
 
   return (
-    <div className="stack" style={{ '--gap': '18px' }}>
+    <div className="ops stack-lg">
       <div className="row spread">
-        <h2>Overview</h2>
-        <Link className="btn btn-primary btn-sm" to="/admin/enquiries">Manage enquiries</Link>
+        <div>
+          <h1 className="h2">Overview</h1>
+          <p className="muted small">Every number comes from the DriveFlow database.</p>
+        </div>
+        <div className="row"><LiveDot lastSync={lastSync} /><Link className="btn btn-primary btn-sm" to="/admin/enquiries">Open inbox</Link></div>
       </div>
 
-      <div className="stats">
+      <div className="kpis">
         {cards.map((c) => (
-          <div key={c.l} className={`stat${c.accent ? ' accent' : ''}`}>
-            <div className="n">{c.n}</div>
-            <div className="l">{c.l}</div>
-            <div className="s">{c.s}</div>
-          </div>
+          <button key={c.l} type="button" className={`kpi${c.accent ? ' accent' : ''}${c.tone ? ` tone-${c.tone}` : ''}`} onClick={() => nav(c.to ? `/admin/enquiries?status=${c.to}` : '/admin/enquiries')}>
+            <span className="kpi-n">{c.n}</span>
+            <span className="kpi-l">{c.l}</span>
+            <span className="kpi-s">{c.sub}</span>
+          </button>
         ))}
       </div>
-      <p className="small muted">Counts include simulated demo enquiries and any you have submitted from the customer site.</p>
 
-      <div className="detail-grid">
-        <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Latest enquiries</h3>
-          <div className="table-wrap" style={{ border: 0 }}>
-            <table style={{ minWidth: 560 }}>
-              <thead><tr><th>ID</th><th>Customer</th><th>Vehicle</th><th>Estimate</th><th>Status</th></tr></thead>
-              <tbody>
-                {recent.map((e) => (
-                  <tr key={e.id} className="click" onClick={() => nav(`/admin/enquiries/${e.id}`)}>
-                    <td><strong>{e.id}</strong></td>
-                    <td>{e.customer.name} {e.simulated && <SimBadge />}</td>
-                    <td>{e.vehicleName}</td>
-                    <td>{e.estimate ? inr(e.estimate.amount) : '—'}</td>
-                    <td><StatusBadge status={e.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="small muted" style={{ marginTop: 8 }}>Newest first · last activity {recent[0] ? fmtDate(recent[0].createdAt) : '—'}</p>
-        </div>
-
-        <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Pipeline</h3>
-          <div className="bars">
-            {STATUSES.map((s) => (
-              <div className="bar" key={s}>
-                <span>{s}</span>
-                <span className="track"><span className="fill" style={{ width: `${(count(s) / max) * 100}%`, display: 'block' }} /></span>
-                <strong>{count(s)}</strong>
-              </div>
+      <div className="ops-grid">
+        <section className="panel">
+          <h2 className="panel-title">Workflow pipeline</h2>
+          <p className="muted small">Received → automated intake → staff review → quote → decision</p>
+          <div className="pipeline">
+            {PIPELINE.map((k) => (
+              <Link key={k} to={`/admin/enquiries?status=${k}`} className="pipe-row">
+                <span className="pipe-label">{STATUS_META[k].label}</span>
+                <span className="pipe-track"><span className={`pipe-fill tone-${STATUS_META[k].tone}`} style={{ width: `${(s.byStatus[k] / max) * 100}%` }} /></span>
+                <span className="pipe-n">{s.byStatus[k]}</span>
+              </Link>
             ))}
+            <div className="pipe-row muted"><span className="pipe-label">Closed</span><span className="pipe-track" /><span className="pipe-n">{s.cards.closed}</span></div>
           </div>
-          <div className="notice" style={{ marginTop: 16 }}>
-            Status changes are made by staff. DriveFlow never confirms a booking automatically.
-          </div>
-        </div>
+        </section>
+        <section className="panel">
+          <h2 className="panel-title">Where enquiries come from</h2>
+          <ul className="src-list">
+            {Object.entries(s.bySource).sort((a, b) => b[1] - a[1]).map(([k, n]) => (
+              <li key={k}><span>{SOURCE_LABEL[k] || k}</span><b>{n}</b></li>
+            ))}
+            {!Object.keys(s.bySource).length && <li className="muted">No enquiries yet.</li>}
+          </ul>
+          <h2 className="panel-title" style={{ marginTop: 18 }}>WhatsApp communications</h2>
+          <ul className="src-list">
+            <li><span>Hand-off links prepared by staff</span><b>{comm.handoff_link || 0}</b></li>
+            <li><span>Automatic messages not sent (API not configured)</span><b>{comm.not_configured || 0}</b></li>
+            <li><span>Sent through WhatsApp Business API</span><b>{comm.sent || 0}</b></li>
+            <li><span>Failed</span><b>{comm.failed || 0}</b></li>
+          </ul>
+        </section>
       </div>
+
+      <section className="panel">
+        <div className="row spread"><h2 className="panel-title">Recent activity</h2><Link to="/admin/enquiries" className="small">View all</Link></div>
+        <div className="table-wrap flat">
+          <table>
+            <thead><tr><th>Reference</th><th>Customer</th><th>Car</th><th>City</th><th>Source</th><th>Status</th><th>Updated</th></tr></thead>
+            <tbody>
+              {recent.map((e) => (
+                <tr key={e.reference} className="click" onClick={() => nav(`/admin/enquiries/${e.reference}`)}>
+                  <td><Link to={`/admin/enquiries/${e.reference}`} className="mono ref-link" onClick={(ev) => ev.stopPropagation()}>{e.reference}</Link></td>
+                  <td>{e.customer.name} {e.isDemo && <span className="badge sim">Demo</span>}</td>
+                  <td>{e.vehicle?.name || <span className="muted">Not chosen</span>}</td>
+                  <td>{CITY_LABEL[e.city] || '—'}</td>
+                  <td><SourceTag source={e.source} /></td>
+                  <td><StatusPill status={e.status} /></td>
+                  <td className="muted small">{fmtWhenIso(e.updatedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }
